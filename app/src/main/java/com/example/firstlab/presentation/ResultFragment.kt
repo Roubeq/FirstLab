@@ -1,57 +1,90 @@
 package com.example.firstlab.presentation
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.ComposeView
+import androidx.navigation.fragment.findNavController
 import com.example.firstlab.R
 
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [ResultFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class ResultFragment : Fragment() {
-    private var param1: String? = null
-    private var param2: String? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_result, container, false)
+    ): View {
+        val view = inflater.inflate(R.layout.fragment_result, container, false)
+
+        // Получаем параметры из аргументов
+        val param1 = arguments?.getString("param1") ?: ""
+        val param2 = arguments?.getString("param2") ?: ""
+
+        Log.d("ResultFragment", "Received param1: $param1")
+        Log.d("ResultFragment", "Received param2: $param2")
+
+        // Устанавливаем содержимое ComposeView
+        val composeView = view.findViewById<ComposeView>(R.id.composeView)
+        composeView.setContent {
+            ResultFragmentScreen(param1, param2)
+        }
+
+        return view
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment ResultFragment.
-         */
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            ResultFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    @Composable
+    fun ResultFragmentScreen(states: String, transitionsInput: String) {
+        val statesList = states.split(",").map { it.trim() }
+        val transitions = parseTransitionsFromString(transitionsInput)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "NKA States:")
+            statesList.forEach { state ->
+                Text(text = state)
+            }
+
+            Text(text = "Transitions:")
+            transitions.forEach { (key, value) ->
+                Text(text = "${key.first} --> ${key.second} --> ${value.joinToString(", ")}")
+            }
+        }
+    }
+
+    private fun parseTransitionsFromString(input: String): Map<Pair<String, Char>, Set<String>> {
+        val transitions = mutableMapOf<Pair<String, Char>, Set<String>>()
+        val transitionLines = input.split(";").map { it.trim() }
+
+        for (line in transitionLines) {
+            val parts = line.split("->").map { it.trim() }
+            if (parts.size == 2) {
+                val left = parts[0]
+                val right = parts[1].split(",").map { it.trim() }
+
+                val leftParts = left.split(",").map { it.trim() }
+                if (leftParts.size == 2) {
+                    val state = leftParts[0]
+                    val symbol = leftParts[1].singleOrNull() // Получаем единственный символ
+                    if (symbol != null) {
+                        transitions[Pair(state, symbol)] = right.toSet()
+                    }
                 }
             }
+        }
+        return transitions
     }
 }
